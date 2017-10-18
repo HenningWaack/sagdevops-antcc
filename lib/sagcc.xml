@@ -1,6 +1,6 @@
 <project name="sagcc" default="help-sagcc" xmlns="antlib:org.apache.tools.ant" xmlns:if="ant:if" xmlns:unless="ant:unless" basedir="." >
 	<description>
-        Core Command Central API client library and targets 
+        Core Command Central API client library and targets
     </description>
 	
 	<property environment="env" />
@@ -15,10 +15,6 @@
 	
     <condition property="cc.properties" value="clients/${cc}/cc.properties">
         <available file="clients/${cc}/cc.properties"/>
-    </condition>
-	
-	<condition property="cc.properties" value="client/${cc}.properties">
-        <available file="client/${cc}.properties"/>
     </condition>
 	
     <!-- user clients -->
@@ -48,59 +44,38 @@ ant logs                         Show tail of agents default log
 
 	<!-- call this target internally to initialize connection to CC using cc.properties -->
 	<target name="sagccInit">
-
-		<antversion atleast="1.9" property="ant.version.ok" />
-		<fail unless="ant.version.ok">
-			ERROR: Unsupported Ant version: ${ant.version}. 
-Make sure that Ant version is 1.9 or greater
-		</fail>
-
-		<fail>
-			<condition>
-				<not>
-				<or>
-					<equals arg1="${ant.java.version}" arg2="1.8"/>
-					<equals arg1="${ant.java.version}" arg2="1.9"/>
-				</or>
-				</not>
-			</condition>
-			Unsupported Java version: ${ant.java.version}. 
-Make sure that Java version is 1.8 or greater
-		</fail>
-
+	
 		<condition property="cc.properties.exists" >
 			<available file="${cc.properties}"/>
 		</condition>
 
-		<echo unless:set="cc.properties.exists" message="Client configuration file not found. Using ENV variables" />
-		
+		<fail unless="cc.properties.exists" message="Client configuration file cannot be found in any supported locations." />
+
 		<property file="${cc.properties}" />
 
 		<condition property="cc.cli.home" value="${env.CC_CLI_HOME}" >
 			<isset property="env.CC_CLI_HOME" />
 		</condition>
 
-		<fail unless="cc.cli.home">
-			ERROR: Neither CC_CLI_HOME environment variable not 'cc.cli.home' property are set!
-			
-Make sure you bootstrap Command Central client on this host
-		</fail>
+		<fail unless="cc.cli.home" message="Neither CC_CLI_HOME environment variable not 'cc.cli.home' property are set!" />
 
 		<echo>CC CLI HOME: ${cc.cli.home}</echo>
 
+		<!-- with CCE 10.1 ANT and supporting libs like XmlTask are delievered as part of "common/lib/", not not anymore with CCE itself --> 
+		<available file="${cc.cli.home}/../../common/lib/ant" type="dir" property="common.lib.ant.exists"/>
+		
 		<path description="" id="cc.ant.classpath">
-			<fileset dir="${cc.cli.home}" includes="lib/*.jar" /> 
-			<!-- to support 10.1 common/ant distro -->
-			<fileset dir="${cc.cli.home}/../.." includes="common/lib/ant/**/*.jar" /> 
+			<fileset dir="${cc.cli.home}" includes="lib/*.jar" />
+			<!-- with CCE 10.1 ANT and supporting libs like XmlTask are delievered as part of "common/lib/", not not anymore with CCE itself --> 
+			<fileset if:set="common.lib.ant.exists" dir="${cc.cli.home}/../../common/lib/ant" includes="*.jar" />
 		</path>
 
 		<taskdef description="core CLI support" resource="com/softwareag/platform/management/client/ant/antlib.xml" classpathref="cc.ant.classpath" />
-
 		<taskdef description="conditions,cycles,etc" resource="net/sf/antcontrib/antlib.xml" classpathref="cc.ant.classpath" />
 		<taskdef description="xml processing" name="xmltask" classname="com.oopsconsultancy.xmltask.ant.XmlTask" classpathref="cc.ant.classpath" />
 		<taskdef description="unit testing" uri="antlib:org.apache.ant.antunit" resource="org/apache/ant/antunit/antlib.xml" classpathref="cc.ant.classpath" />
 
-		<echo if:set="cc.properties.exists">CC CLI configuration: ${cc.properties}</echo>
+		<echo>CC CLI configuration: ${cc.properties}</echo>
 
 		<ccsetup configurationFile="${cc.properties}" />
 
@@ -160,4 +135,8 @@ Make sure you bootstrap Command Central client on this host
         <cc command="list inventory components runtimeComponentCategory=PROCESS properties=runtimeComponent.displayName,nodeAlias" format="tsv" />
     </target>	
 
+	<target name="clean" description="Delete build and temp files" >
+		<delete dir="build" />
+	</target>	
+	
 </project>
